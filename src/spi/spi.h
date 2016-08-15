@@ -8,4 +8,5 @@
  */
 
 int spi_init(const char *dev);
-int spi_transfer(uint8_t *tx, int ltx, uint8_t *rx, int lrx);
+int spi_transfer(void *tx, uint16_t ltx, void *rx, uint16_t lrx);
+void spi_deinit(void);
