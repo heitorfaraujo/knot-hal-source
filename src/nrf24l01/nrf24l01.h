@@ -7,7 +7,6 @@
  *
  */
 
-#include <stdint.h>
 #include "nrf24l01_io.h"
 
 #define NRF24L01_POWER							PWR_0DBM					// Output power in max power
@@ -16,8 +15,19 @@
 #define NRF24L01_ADDR_WIDTHS				5										// Address width is 5 bytes
 
 #define NRF24L01_PIPE0_ADDR				0
+#define NRF24L01_PIPE1_ADDR				1
+#define NRF24L01_PIPE2_ADDR				2
+#define NRF24L01_PIPE3_ADDR				3
+#define NRF24L01_PIPE4_ADDR				4
+#define NRF24L01_PIPE5_ADDR				5
+#define NRF24L01_PIPE_ADDR_MAX		NRF24L01_PIPE5_ADDR
+
+#define NRF24L01_PIPE_MIN						0									// pipe min
+#define NRF24L01_PIPE_MAX						5									// pipe max
 
 #define _CONSTRAIN(x,l,h)		((x)<(l)?(l):((x)>(h)?(h):(x)))
+
+
 
 int8_t nrf24l01_init(void);
 int8_t nrf24l01_set_channel(uint8_t ch);
