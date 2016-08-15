@@ -27,8 +27,13 @@
 
 #define _CONSTRAIN(x,l,h)		((x)<(l)?(l):((x)>(h)?(h):(x)))
 
+#define NRF24L01_PAYLOAD_SIZE				32
+
 
 
 int8_t nrf24l01_init(void);
 int8_t nrf24l01_set_channel(uint8_t ch);
-
+int8_t nrf24l01_open_pipe(uint8_t pipe, uint8_t pipe_addr);
+int8_t nrf24l01_set_ptx(uint8_t pipe_addr);
+int8_t nrf24l01_ptx_data(void *pdata, uint16_t len, bool ack);
+int8_t nrf24l01_ptx_wait_datasent(void);
