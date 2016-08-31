@@ -25,12 +25,28 @@ enum states {
 
 static char *opt_mode = "server";
 
+uint8_t bufferRx[32];
+
 static GMainLoop *main_loop;
 
 static void sig_term(int sig)
 {
 	g_main_loop_quit(main_loop);
 	nrf24l01_deinit();
+
+}
+
+static void printBuffer(uint8_t *buffer, ssize_t len)
+{
+	int index;
+
+	for (index = 0; index < len; index++) {
+		if (index % 8 == 0)
+			printf("\n");
+
+		printf("0x%02x ", buffer[index]);
+	}
+	printf("\n");
 
 }
 
@@ -52,13 +68,12 @@ static gboolean timeout_watch_client(gpointer user_data)
 	};
 
 	static uint32_t counter = 0;
-	int index;
 	static enum states state = SEND;
+	static int err = 0;
 
 	switch (state) {
 
 	case SEND: /* Send the message */
-
 		counter++;
 
 		buffer[28] = counter >> 24;
@@ -66,22 +81,49 @@ static gboolean timeout_watch_client(gpointer user_data)
 		buffer[30] = counter >> 8;
 		buffer[31] = counter;
 
-		for (index = 0; index < 32; index++) {
-			if (index % 8 == 0)
-			printf("\n");
+		printf("\nClient Mode -> Send Message\n");
 
-			printf("0x%02x ", buffer[index]);
-		}
+		printBuffer(buffer, 32);
+		memcpy(bufferRx, buffer, sizeof(buffer));
 
-		/* Send the Buffer here */
+		do {
+			/* Open pipe 0 enabling ACK */
+			nrf24l01_set_ptx(0, true);
+			/* Sends the data */
+			nrf24l01_ptx_data(&buffer, sizeof(buffer));
+			/* Waits for ACK - returns 0 on succes */
+			err = nrf24l01_ptx_wait_datasent();
 
+			if (err != 0)
+				memcpy(buffer, bufferRx, sizeof(bufferRx));
+
+		/* Loop until receive ACK */
+		} while (err != 0);
+
+		nrf24l01_set_prx();
 		state = RECEIVE;
+		printf("Waiting for response...\n");
 		break;
 
-	case RECEIVE:
+	case RECEIVE: /* Receive the message sent*/
 
-		/* Receives the message sent here */
-		state = SEND;
+		/* If data available in pipe 0 */
+		if (nrf24l01_prx_pipe_available() == 0) {
+
+			/* Reads the data */
+			nrf24l01_prx_data(&buffer, sizeof(buffer));
+
+			/* Compares the message */
+			if (memcmp(buffer, bufferRx, sizeof(bufferRx)) == 0)
+				printf("Correct Message Received\n");
+			else {
+				printf("Different Message Received\n");
+				return -1;
+			}
+
+			/* Go to SEND state */
+			state = SEND;
+		}
 		break;
 	}
 
@@ -104,6 +146,7 @@ static gboolean timeout_watch_server(gpointer user_data)
 
 		/* Send the received message here */
 		state = RECEIVE;
+
 		break;
 
 	case RECEIVE:
@@ -162,6 +205,11 @@ int main(int argc, char *argv[])
 	main_loop = g_main_loop_new(NULL, FALSE);
 
 	printf("RPi nRF24L01 Radio test tool %s mode\n", opt_mode);
+	err = radio_init();
+	if (err < 0) {
+		g_main_loop_unref(main_loop);
+		return EXIT_FAILURE;
+	}
 
 	if (strcmp(opt_mode, "client") == 0)
 		timeout_id = g_timeout_add_seconds(1,
@@ -169,12 +217,6 @@ int main(int argc, char *argv[])
 	else
 		timeout_id = g_timeout_add_seconds(1,
 						timeout_watch_server, NULL);
-
-	err = radio_init();
-	if (err < 0) {
-		g_main_loop_unref(main_loop);
-		return EXIT_FAILURE;
-	}
 
 	g_main_loop_run(main_loop);
 
