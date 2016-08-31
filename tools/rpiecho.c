@@ -134,6 +134,9 @@ static gboolean timeout_watch_server(gpointer user_data)
 {
 
 	static enum states state = RECEIVE;
+	static int err = 0;
+	static uint8_t buffer[32];
+	uint16_t rxlen;
 
 	/*
 	 * The server receive the message from the
@@ -144,15 +147,43 @@ static gboolean timeout_watch_server(gpointer user_data)
 
 	case SEND:
 
-		/* Send the received message here */
+		printf("\nServer Mode -> Send Message");
+		/* Print the message received */
+		printBuffer(buffer, 32);
+
+		memcpy(bufferRx, buffer, sizeof(buffer));
+
+		do {
+			/* Open pipe 0 enabling ACK */
+			nrf24l01_set_ptx(0, true);
+			/* Sends the data */
+			nrf24l01_ptx_data(&buffer, sizeof(buffer));
+			err = nrf24l01_ptx_wait_datasent();
+			/* Waits for ACK - returns 0 on succes */
+
+			/* If error, copy buffer again */
+			if (err != 0)
+				memcpy(buffer, bufferRx, sizeof(bufferRx));
+
+		/* Loop until receive the ACK */
+		} while (err != 0);
+
 		state = RECEIVE;
+		nrf24l01_set_prx();
 
 		break;
 
 	case RECEIVE:
 
-		/* Receive the messagem from client here */
-		state = SEND;
+		if (nrf24l01_prx_pipe_available() == 0) {
+
+			printf("\nServer Mode -> Message Received ");
+
+			rxlen = nrf24l01_prx_data(&buffer, sizeof(buffer));
+			printBuffer(buffer, rxlen);
+
+			state = SEND;
+		}
 		break;
 	}
 
