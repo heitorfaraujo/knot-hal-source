@@ -18,6 +18,8 @@
 #include "spi.h"
 #include "nrf24l01.h"
 
+#define MAXRETRIES 20
+
 enum states {
 	SEND,
 	RECEIVE
@@ -50,6 +52,13 @@ static void printBuffer(uint8_t *buffer, ssize_t len)
 
 }
 
+static void timeout_destroy(gpointer user_data)
+{
+	g_main_loop_quit(main_loop);
+	nrf24l01_deinit();
+
+}
+
 static gboolean timeout_watch_client(gpointer user_data)
 {
 
@@ -70,6 +79,7 @@ static gboolean timeout_watch_client(gpointer user_data)
 	static uint32_t counter = 0;
 	static enum states state = SEND;
 	static int err = 0;
+	int retries;
 
 	switch (state) {
 
@@ -86,6 +96,8 @@ static gboolean timeout_watch_client(gpointer user_data)
 		printBuffer(buffer, 32);
 		memcpy(bufferRx, buffer, sizeof(buffer));
 
+		retries = 0;
+
 		do {
 			/* Open pipe 0 enabling ACK */
 			nrf24l01_set_ptx(0, true);
@@ -97,6 +109,12 @@ static gboolean timeout_watch_client(gpointer user_data)
 			if (err != 0)
 				memcpy(buffer, bufferRx, sizeof(bufferRx));
 
+			if (retries > MAXRETRIES) {
+				printf("Could not send the message\n");
+				return FALSE;
+			}
+
+			retries++;
 		/* Loop until receive ACK */
 		} while (err != 0);
 
@@ -118,7 +136,7 @@ static gboolean timeout_watch_client(gpointer user_data)
 				printf("Correct Message Received\n");
 			else {
 				printf("Different Message Received\n");
-				return -1;
+				return FALSE;
 			}
 
 			/* Go to SEND state */
@@ -136,6 +154,7 @@ static gboolean timeout_watch_server(gpointer user_data)
 	static enum states state = RECEIVE;
 	static int err = 0;
 	static uint8_t buffer[32];
+	int retries;
 	uint16_t rxlen;
 
 	/*
@@ -153,6 +172,8 @@ static gboolean timeout_watch_server(gpointer user_data)
 
 		memcpy(bufferRx, buffer, sizeof(buffer));
 
+		retries = 0;
+
 		do {
 			/* Open pipe 0 enabling ACK */
 			nrf24l01_set_ptx(0, true);
@@ -164,6 +185,13 @@ static gboolean timeout_watch_server(gpointer user_data)
 			/* If error, copy buffer again */
 			if (err != 0)
 				memcpy(buffer, bufferRx, sizeof(bufferRx));
+
+			if (retries > MAXRETRIES) {
+				printf("Could not send the message\n");
+				return FALSE;
+			}
+
+			retries++;
 
 		/* Loop until receive the ACK */
 		} while (err != 0);
@@ -216,7 +244,7 @@ int main(int argc, char *argv[])
 {
 	GOptionContext *context;
 	GError *gerr = NULL;
-	int err, timeout_id;
+	int err;
 	signal(SIGTERM, sig_term);
 	signal(SIGINT, sig_term);
 	signal(SIGPIPE, SIG_IGN);
@@ -243,15 +271,13 @@ int main(int argc, char *argv[])
 	}
 
 	if (strcmp(opt_mode, "client") == 0)
-		timeout_id = g_timeout_add_seconds(1,
-						timeout_watch_client, NULL);
+		g_timeout_add_seconds_full(G_PRIORITY_DEFAULT, 1,
+			timeout_watch_client, NULL, timeout_destroy);
 	else
-		timeout_id = g_timeout_add_seconds(1,
-						timeout_watch_server, NULL);
+		g_timeout_add_seconds_full(G_PRIORITY_DEFAULT, 1,
+			timeout_watch_server, NULL, timeout_destroy);
 
 	g_main_loop_run(main_loop);
-
-	g_source_remove(timeout_id);
 
 	g_main_loop_unref(main_loop);
 
