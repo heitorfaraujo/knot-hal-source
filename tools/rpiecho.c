@@ -17,8 +17,17 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
-
+#include <string.h>
 #include <glib.h>
+#include <stdbool.h>
+
+#include "spi.h"
+#include "nrf24l01.h"
+
+enum states {
+	SEND,
+	RECEIVE
+};
 
 static char *opt_mode = "server";
 
@@ -27,10 +36,13 @@ static GMainLoop *main_loop;
 static void sig_term(int sig)
 {
 	g_main_loop_quit(main_loop);
+	nrf24l01_deinit();
+
 }
 
-static gboolean timeout_watch(gpointer user_data)
+static gboolean timeout_watch_client(gpointer user_data)
 {
+
 	/*
 	 * This function gets called frequently to verify
 	 * if there is SPI/nRF24L01 data to be read or
@@ -46,21 +58,65 @@ static gboolean timeout_watch(gpointer user_data)
 
 	static uint32_t counter = 0;
 	int index;
+	static enum states state = SEND;
 
-	counter++;
+	switch (state) {
 
-	buffer[28] = counter >> 24;
-	buffer[29] = counter >> 16;
-	buffer[30] = counter >> 8;
-	buffer[31] = counter;
+	case SEND: /* Send the message */
 
-	for (index = 0; index < 32; index++) {
-		if (index % 8 == 0)
+		counter++;
+
+		buffer[28] = counter >> 24;
+		buffer[29] = counter >> 16;
+		buffer[30] = counter >> 8;
+		buffer[31] = counter;
+
+		for (index = 0; index < 32; index++) {
+			if (index % 8 == 0)
 			printf("\n");
 
-		printf("0x%02x ", buffer[index]);
+			printf("0x%02x ", buffer[index]);
+		}
+
+		/* Send the Buffer here */
+
+		state = RECEIVE;
+		break;
+
+	case RECEIVE: /* Receive the sent message */
+
+		state = SEND;
+		break;
+
+	default:
+		break;
+
 	}
 
+	return TRUE;
+}
+
+static gboolean timeout_watch_server(gpointer user_data)
+{
+
+	static enum states state = RECEIVE;
+
+	switch (state) {
+
+	case SEND:	/* Send the received message */
+
+		state = RECEIVE;
+		break;
+
+	case RECEIVE: /* Receive the messagem from client */
+
+		state = SEND;
+		break;
+
+	default:
+		break;
+
+	}
 	return TRUE;
 }
 
@@ -74,8 +130,7 @@ int main(int argc, char *argv[])
 {
 	GOptionContext *context;
 	GError *gerr = NULL;
-	int err, timeout_id;
-
+	int timeout_id;
 	signal(SIGTERM, sig_term);
 	signal(SIGINT, sig_term);
 	signal(SIGPIPE, SIG_IGN);
@@ -94,9 +149,14 @@ int main(int argc, char *argv[])
 
 	main_loop = g_main_loop_new(NULL, FALSE);
 
-	printf("RPi nRF24L01 Radio test tool\n");
+	printf("RPi nRF24L01 Radio test tool %s mode\n", opt_mode);
 
-	timeout_id = g_timeout_add_seconds(1, timeout_watch, NULL);
+	if (strcmp(opt_mode, "client") == 0)
+		timeout_id = g_timeout_add_seconds(1,
+						timeout_watch_client, NULL);
+	else
+		timeout_id = g_timeout_add_seconds(1,
+						timeout_watch_server, NULL);
 
 	g_main_loop_run(main_loop);
 
