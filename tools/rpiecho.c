@@ -116,6 +116,22 @@ static gboolean timeout_watch_server(gpointer user_data)
 	return TRUE;
 }
 
+static int radio_init(void)
+{
+	printf("Radio init\n");
+	/* Init the nrf24l01+ */
+	nrf24l01_init("/dev/spidev0.0");
+	/* Set the operation channel - Channel default = 10 */
+	nrf24l01_set_channel(NRF24_CHANNEL_DEFAULT);
+	nrf24l01_set_standby();
+	/* Open pipe zero */
+	nrf24l01_open_pipe(0, 0);
+	/* Put the radio in RX mode to start receive packets */
+	nrf24l01_set_prx();
+
+	return 0;
+}
+
 static GOptionEntry options[] = {
 	{ "mode", 'm', 0, G_OPTION_ARG_STRING, &opt_mode,
 					"mode", "Operation mode: server or client" },
@@ -126,7 +142,7 @@ int main(int argc, char *argv[])
 {
 	GOptionContext *context;
 	GError *gerr = NULL;
-	int timeout_id;
+	int err, timeout_id;
 	signal(SIGTERM, sig_term);
 	signal(SIGINT, sig_term);
 	signal(SIGPIPE, SIG_IGN);
@@ -154,11 +170,17 @@ int main(int argc, char *argv[])
 		timeout_id = g_timeout_add_seconds(1,
 						timeout_watch_server, NULL);
 
+	err = radio_init();
+	if (err < 0) {
+		g_main_loop_unref(main_loop);
+		return EXIT_FAILURE;
+	}
+
 	g_main_loop_run(main_loop);
 
 	g_source_remove(timeout_id);
 
 	g_main_loop_unref(main_loop);
 
-	return 0;
+	return EXIT_SUCCESS;
 }
