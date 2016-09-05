@@ -11,6 +11,9 @@
 #include <Arduino.h>
 #endif
 
+// invalid socket fd
+#define SOCKET_INVALID		-1
+
  /**
  * struct phy_driver - driver abstraction for the physical layer
  * @name: driver name
