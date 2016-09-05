@@ -11,8 +11,17 @@
 #include <errno.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <stdbool.h>
 
 #include "phy_driver.h"
+#include "nrf24l01-mac.h"
+#include "nrf24l01.h"
+
+// protocol version
+#define NRF24_VERSION_MAJOR	1
+#define NRF24_VERSION_MINOR	0
+
+#define PACKET_SIZE 132
 
 enum {
 	STATE_INVALID,
@@ -23,9 +32,29 @@ enum {
 
 static int m_state = STATE_INVALID, m_fd = SOCKET_INVALID;
 
-static int nrf24l01_probe(void)
+static version_t m_version =  {	major: NRF24_VERSION_MAJOR,
+						minor : NRF24_VERSION_MINOR,
+						packet_size : 0
+};
+
+static int nrf24l01_probe()
 {
-	return 0;
+
+	if (m_state > STATE_INVALID)
+		return 0;
+
+	if (PACKET_SIZE == 0 || PACKET_SIZE > UINT16_MAX)
+		return -EINVAL;
+
+	m_version.packet_size = PACKET_SIZE;
+
+	if (nrf24l01_init() == 0) {
+		m_state = STATE_UNKNOWN;
+		return 0;
+	}
+
+	return -EIO;
+
 }
 
 static void nrf24l01_remove(void)
