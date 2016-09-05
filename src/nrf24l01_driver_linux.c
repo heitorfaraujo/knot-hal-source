@@ -56,6 +56,28 @@ static int nrf24l01_probe(size_t packet_size)
 
 }
 
+static int nrf24l01_connect(int cli_sockfd, uint8_t to_addr, size_t len)
+{
+
+	/* if m state is not UNKNOW, something went wrong in probe */
+	if (m_state != STATE_UNKNOWN)
+		return -EACCES;
+
+
+	if (m_fd == SOCKET_INVALID || cli_sockfd != m_fd)
+		return -EBADF;
+
+	if (len != sizeof(int) || to_addr < NRF24_CH_MIN ||
+						to_addr > NRF24_CH_MAX_1MBPS)
+		return -EINVAL;
+
+
+	/* TO DO */
+	/* Implement nrf24l01 client open function */
+	m_state = STATE_CLIENT;
+
+	return -1;
+}
 static void nrf24l01_remove(void)
 {
 
