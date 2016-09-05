@@ -31,7 +31,7 @@
 struct phy_driver {
 	const char *name;
 	int domain;		/* Protocol domain: Radio nRF24L01, nRF905, ... */
-	int (*probe) (void);
+	int (*probe) (size_t packet_size);
 	void (*remove) (void);
 
 	int (*socket) (int type, int protocol);
