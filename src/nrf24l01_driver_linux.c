@@ -8,8 +8,20 @@
  */
 #include <stdint.h>
 #include <stdlib.h>
+#include <errno.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 
 #include "phy_driver.h"
+
+enum {
+	STATE_INVALID,
+	STATE_UNKNOWN,
+	STATE_SERVER,
+	STATE_CLIENT
+} e_state;
+
+static int m_state = STATE_INVALID, m_fd = SOCKET_INVALID;
 
 static int nrf24l01_probe(void)
 {
@@ -29,6 +41,23 @@ static int nrf24l01_open(const char *pathname)
 	 * RPi should expose SPI communication through a TCP socket
 	 * allowing an external machine to manage pipes and send data.
 	 */
+
+	if (m_state == STATE_INVALID)
+		return -EACCES;
+
+
+	if (m_fd != SOCKET_INVALID)
+		return -EMFILE;
+
+
+	m_fd = socket(AF_UNIX, SOCK_SEQPACKET | SOCK_CLOEXEC, 0);
+	if (m_fd < 0) {
+		m_fd = SOCKET_INVALID;
+		return -errno;
+	}
+
+
+	return m_fd;
 }
 
 struct phy_driver nrf24l01 = {
