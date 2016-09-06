@@ -20,7 +20,9 @@
 #include "phy_driver.h"
 
 typedef struct {
-	uint8_t		pipe;
+	uint8_t		pipe,
+				rxmn,
+				txmn;
 } client_t;
 
 typedef struct {
@@ -47,6 +49,44 @@ static data_t *build_data(data_t *pd, uint8_t pipe, uint16_t net_addr,
 	pd->offset_retry = 0;
 	return pd;
 }
+
+/* send data to be transmitted by the radio */
+static int16_t send_data(data_t *pdata, void *praw, uint16_t len)
+{
+	payload_t payload;
+	uint8_t msg_type = pdata->msg_type;
+
+	if (msg_type == NRF24_APP && len > NRF24_PW_MSG_SIZE) {
+		//if message needs to be fragmented
+		msg_type = NRF24_APP_LAST;
+		if (pdata->offset == 0) {
+			msg_type = NRF24_APP_FIRST;
+			len = NRF24_PW_MSG_SIZE;
+		} else {
+			len -= pdata->offset;
+			if (len > NRF24_PW_MSG_SIZE) {
+				msg_type = NRF24_APP_FRAG;
+				len = NRF24_PW_MSG_SIZE;
+			}
+		}
+	}
+	payload.hdr.net_addr = pdata->net_addr;
+	memcpy(payload.msg.raw, (((uint8_t *)praw) + pdata->offset), len);
+	pdata->offset_retry = pdata->offset;
+	pdata->offset += len;
+	//put the radio in TX mode
+	nrf24l01_set_ptx(pdata->pipe);
+	//transmit data
+	nrf24l01_ptx_data(&payload, len + sizeof(hdr_t),
+						pdata->pipe != BROADCAST);
+
+	//waiting to be sent - returns 0 if success
+	len = nrf24l01_ptx_wait_datasent();
+	//put the radio in RX mode
+	nrf24l01_set_prx();
+	return len;
+}
+
 
 int16_t nrf24l01_client_open(int16_t socket, uint8_t channel,
 							version_t *pversion)

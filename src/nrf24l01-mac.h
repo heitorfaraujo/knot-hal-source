@@ -12,6 +12,18 @@
 
 #define BROADCAST			NRF24_PIPE0_ADDR
 
+// network messages
+enum {
+	NRF24_GATEWAY_REQ,
+	NRF24_JOIN_LOCAL,
+	NRF24_UNJOIN_LOCAL,
+	NRF24_HEARTBEAT,
+	NRF24_APP,
+	NRF24_APP_FIRST,
+	NRF24_APP_FRAG,
+	NRF24_APP_LAST
+};
+
 // network retransmiting parameters
 #define NRF24_DELAY_MS		(((NRF24_ARD + 1) * \
 						NRF24_ARD_FACTOR_US) / 1000)
@@ -32,6 +44,22 @@
 #define SEND_RETRY		((NRF24_HEARTBEAT_TIMEOUT_MS - \
 		(NRF24_HEARTBEAT_SEND_MS + SEND_RANGE_MS)) / SEND_RANGE_MS)
 
+// Network message size parameters
+#define NRF24_PW_SIZE			32
+#define NRF24_PW_MSG_SIZE		(NRF24_PW_SIZE - sizeof(hdr_t))
+
+/**
+ * struct hdr_t - net layer message header
+ * @net_addr: net address
+ * @msg_type: message type
+ * @offset: message fragment offset
+ *
+ * This struct defines the network layer message header
+ */
+typedef struct __attribute__ ((packed)) {
+	uint16_t		net_addr;
+} hdr_t;
+
 /**
  * struct version_t - network layer version
  * @major: protocol version, major number
@@ -45,5 +73,40 @@ typedef struct __attribute__ ((packed)) {
 	uint8_t				minor;
 	uint16_t			packet_size;
 } version_t;
+
+/**
+ * struct join_t - network layer join message
+ * @result: join process result
+ * @version: network layer version
+ * @hashid: id for network
+ * @data: join data
+ *
+ * This struct defines the network layer join message.
+ */
+typedef struct __attribute__ ((packed)) {
+	int8_t					result;
+	version_t			version;
+	uint32_t				hashid;
+	uint32_t				data;
+} join_t;
+
+/**
+ * union payload_t - defines a network layer payload
+ * @hdr: net layer message header
+ * @result: process result
+ * @join: net layer join local message
+ * @raw: raw data of network layer
+ *
+ * This union defines the network layer payload.
+ */
+typedef struct __attribute__ ((packed))  {
+	hdr_t			hdr;
+	union {
+		int8_t		result;
+		join_t		join;
+		uint8_t	raw[NRF24_PW_MSG_SIZE];
+	} msg;
+} payload_t;
+
 
 #endif //	__NRF24L01_MAC__
