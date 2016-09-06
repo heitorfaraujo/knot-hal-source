@@ -13,6 +13,7 @@
 #include <string.h>
 #include <errno.h>
 #include <stdbool.h>
+#include <netinet/in.h>
 
 #include "nrf24l01-mac.h"
 #include "nrf24l01_client.h"
@@ -37,11 +38,13 @@ typedef struct {
 } tline_t;
 
 typedef struct {
-	uint8_t		pipe,
-				rxmn,
-				txmn,
-				heartbeat,
-				heartbeat_wait;
+	uint8_t			pipe,
+					rxmn,
+					txmn,
+					heartbeat;
+	unsigned long	heartbeat_wait;
+	uint32_t		hashid;
+	uint16_t		net_addr;
 } client_t;
 
 typedef struct {
@@ -56,6 +59,17 @@ typedef struct {
 static int16_t	m_fd = SOCKET_INVALID;
 static client_t		m_client;
 static version_t	*m_pversion = NULL;
+
+static void disconnect(void)
+{
+	nrf24l01_set_standby();
+	nrf24l01_close_pipe(0);
+	memset(&m_client, 0, sizeof(m_client));
+	m_client.pipe = BROADCAST;
+	m_fd = SOCKET_INVALID;
+	m_pversion = NULL;
+}
+
 
 static data_t *build_data(data_t *pd, uint8_t pipe, uint16_t net_addr,
 						uint8_t msg_type)
@@ -135,8 +149,8 @@ static int16_t ptx_service(data_t *pdata, void *praw, uint16_t len)
 			if (result != 0) {
 				if (--pdata->retry == 0) {
 					printf("Failed to send message to the pipe\n");
-					/* TO DO */
-					/* Call disconect */
+
+					disconnect();
 					return -ETIMEDOUT;
 				} else {
 					pdata->offset = pdata->offset_retry;
@@ -158,6 +172,37 @@ static int16_t ptx_service(data_t *pdata, void *praw, uint16_t len)
 		}
 	}
 	return result;
+}
+
+static int check_heartbeat(join_t *pj)
+{
+	if (tline_timeout(tline_ms(), m_client.heartbeat_wait,
+						NRF24_HEARTBEAT_TIMEOUT_MS)) {
+		disconnect();
+		return -ETIMEDOUT;
+	}
+
+	if (!m_client.heartbeat && tline_timeout(tline_ms(),
+			m_client.heartbeat_wait, NRF24_HEARTBEAT_SEND_MS)) {
+		data_t data;
+
+		pj->version.major = m_pversion->major;
+		pj->version.minor = m_pversion->minor;
+		pj->version.packet_size = khtons(m_pversion->packet_size);
+		pj->hashid = khtonl(m_client.hashid);
+		pj->data = khtonl(m_client.pipe);
+		pj->result = NRF24_SUCCESS;
+		if (ptx_service(build_data(&data, (m_client.pipe),
+			khtons(m_client.net_addr), NRF24_HEARTBEAT), pj,
+			sizeof(join_t)) == 0) {
+			m_client.heartbeat_wait = tline_ms();
+			m_client.heartbeat = true;
+		} else {
+			return -1;
+		}
+	}
+
+	return 0;
 }
 
 int16_t nrf24l01_client_open(int16_t socket, uint8_t channel,
