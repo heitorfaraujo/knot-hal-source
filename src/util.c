@@ -33,6 +33,16 @@ unsigned long tline_ms(void)
 	return time;
 }
 
+unsigned long tline_us(void)
+{
+	unsigned long time;
+
+	while (tline(&time, 1UL) < 0)
+		usleep(1);
+
+	return time;
+}
+
 #endif
 
 int tline_timeout(unsigned long time,  unsigned long last,  unsigned long timeout)
@@ -47,4 +57,23 @@ int tline_timeout(unsigned long time,  unsigned long last,  unsigned long timeou
 
 	/* Timeout is flagged */
 	return (time >= timeout);
+}
+
+
+int get_random_value(int interval, int ntime, int min)
+{
+	int value;
+
+	value = (9973 * ~tline_us()) + ((value) % 701);
+	srand((unsigned int)value);
+
+	value = (rand() % interval) * ntime;
+	if (value < 0) {
+		value *= -1;
+		value = (value % interval) * ntime;
+	}
+	if (value < min)
+		value += min;
+
+	return value;
 }
