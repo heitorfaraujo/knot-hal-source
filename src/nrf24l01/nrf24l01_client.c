@@ -244,6 +244,54 @@ static int16_t clireq_read(uint16_t net_addr, join_t *pj, tline_t *pt)
 	return tline_timeout(tline_ms(), pt->start, pt->delay) ? TIMEOUT : PENDING;
 }
 
+static int16_t join_local(void)
+{
+	int16_t state = REQUEST;
+	tline_t	timer;
+	join_t	join;
+	data_t data;
+
+	nrf24l01_open_pipe(0, BROADCAST);
+
+	join.version.major = m_pversion->major;
+	join.version.minor = m_pversion->minor;
+	join.version.packet_size = khtons(m_pversion->packet_size);
+	join.hashid = get_random_value(RAND_MAX, 1, 1);
+	join.hashid ^= (get_random_value(RAND_MAX, 1, 1) * 65536);
+	join.hashid = khtonl(join.hashid);
+	join.data = 0;
+	join.result = NRF24_SUCCESS;
+	//put the values on data
+	build_data(&data, BROADCAST, ((join.hashid / 65536) ^
+		join.hashid), NRF24_JOIN_LOCAL);
+	data.retry = get_random_value(JOINREQ_RETRY, 2, JOINREQ_RETRY);
+	while (state == REQUEST || state == PENDING) {
+		switch (state) {
+		case REQUEST:
+			timer.delay = get_random_value(SEND_RANGE_MS,
+				SEND_FACTOR, SEND_RANGE_MS_MIN);
+			send_data(&data, &join, sizeof(join_t));
+			data.offset = 0;
+			timer.start = tline_ms();
+			state = PENDING;
+			break;
+
+		case PENDING:
+			state = clireq_read(data.net_addr, &join, &timer);
+			if (state == TIMEOUT && --data.retry != 0)
+				state = REQUEST;
+
+			break;
+		}
+	}
+
+	if (state != PRX) {
+		nrf24l01_set_standby();
+		nrf24l01_close_pipe(0);
+	}
+	return state;
+}
+
 int16_t nrf24l01_client_open(int16_t socket, uint8_t channel,
 							version_t *pversion)
 {
