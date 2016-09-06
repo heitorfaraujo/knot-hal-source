@@ -29,7 +29,10 @@ static enum {
 	TIMEOUT,
 	PTX_FIRE,
 	PTX_GAP,
-	PTX
+	PTX,
+	USERS,
+	OVERFLOW,
+	PRX
 } e_state;
 
 typedef struct {
@@ -203,6 +206,42 @@ static int check_heartbeat(join_t *pj)
 	}
 
 	return 0;
+}
+
+static int16_t clireq_read(uint16_t net_addr, join_t *pj, tline_t *pt)
+{
+	payload_t	data;
+	int	pipe,
+			len;
+	//checking if RX fifo contains data
+	for (pipe = nrf24l01_prx_pipe_available(); pipe != NRF24_NO_PIPE;
+					pipe = nrf24l01_prx_pipe_available()) {
+		//read the data
+		len = nrf24l01_prx_data(&data, sizeof(data));
+		if (len == (sizeof(data.hdr)+sizeof(data.msg.join)) &&
+			pipe == BROADCAST && data.hdr.net_addr == net_addr
+			&& data.msg.join.hashid == pj->hashid &&
+			MSG_GET(data.hdr.msg_xmn) == NRF24_JOIN_LOCAL) {
+			//if the message is the answer for the join request
+			if (data.msg.result != NRF24_SUCCESS)
+				return (data.msg.result == NRF24_EUSERS ?
+						USERS : OVERFLOW);
+
+			m_client.pipe = kntohl(data.msg.join.data);
+			m_client.net_addr = kntohs(data.hdr.net_addr);
+			m_client.hashid = kntohl(data.msg.join.hashid);
+			m_client.heartbeat_wait = tline_ms();
+			m_client.heartbeat = false;
+			nrf24l01_set_standby();
+			nrf24l01_close_pipe(0);
+			nrf24l01_open_pipe(0, m_client.pipe);
+			//put radio in RX mode
+			nrf24l01_set_prx();
+			return PRX;
+		}
+	}
+
+	return tline_timeout(tline_ms(), pt->start, pt->delay) ? TIMEOUT : PENDING;
 }
 
 int16_t nrf24l01_client_open(int16_t socket, uint8_t channel,
