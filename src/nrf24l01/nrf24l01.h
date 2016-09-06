@@ -58,6 +58,7 @@ int8_t nrf24l01_set_prx(void);
 int8_t nrf24l01_prx_pipe_available(void);
 int8_t nrf24l01_prx_data(void *pdata, uint16_t len);
 int8_t nrf24l01_set_standby(void);
+int8_t nrf24l01_close_pipe(uint8_t pipe);
 
 #ifdef __cplusplus
 } // extern "C"

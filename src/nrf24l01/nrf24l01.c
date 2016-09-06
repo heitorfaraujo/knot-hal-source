@@ -336,3 +336,24 @@ int8_t nrf24l01_prx_data(void *pdata, uint16_t len)
 	}
 	return (int8_t)rxlen;
 }
+
+int8_t nrf24l01_close_pipe(uint8_t pipe)
+{
+	pipe_reg_t rpipe;
+
+	if (m_mode == UNKNOWN_MODE || pipe > NRF24_PIPE_MAX)
+		return -1;
+
+	memcpy(&rpipe, &pipe_reg[pipe], sizeof(pipe_reg_t));
+
+	if (inr(NRF24_EN_RXADDR) & rpipe.en_rxaddr) {
+		outr(NRF24_EN_RXADDR, inr(NRF24_EN_RXADDR) & ~rpipe.en_rxaddr);
+		outr(NRF24_EN_AA, inr(NRF24_EN_AA) & ~rpipe.enaa);
+		outr(NRF24_SETUP_RETR, NRF24_RETR_ARC(NRF24_ARC_DISABLE));
+		if (rpipe.rx_addr == NRF24_RX_ADDR_P0)
+			m_pipe0_addr = NRF24_PIPE0_ADDR;
+
+	}
+	return 0;
+}
+
