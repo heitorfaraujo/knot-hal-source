@@ -9,6 +9,22 @@
 
 #ifdef ARDUINO
 #include <Arduino.h>
+ /* functions for Endianness */
+#define khtons(hostshort)	((uint16_t)((((hostshort) >> 8) & 0xff)
+				| (((hostshort) & 0xff) << 8)))
+
+#define khtonl(hostlong)	((uint32_t)((hostlong >> 24)
+						| ((hostlong<<8) & 0x00FF0000)
+						| ((hostlong>>8) & 0x0000FF00)
+						| (hostlong << 24)))
+
+#define kntohs(netshort)	khtons(netshort)
+#define kntohl(netlong)		khtonl(netlong)
+#else
+#define khtons(hostshort)	htons((uint16_t)hostshort)
+#define khtonl(hostlong)	htonl((uint32_t)hostlong)
+#define kntohs(netshort)	khtons(netshort)
+#define kntohl(netlong)		khtonl(netlong)
 #endif
 
 // invalid socket fd
