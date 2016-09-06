@@ -10,6 +10,7 @@
 #ifndef __NRF24L01_MAC_H__
 #define __NRF24L01_MAC_H__
 
+#define BROADCAST			NRF24_PIPE0_ADDR
 
 /**
  * struct version_t - network layer version
