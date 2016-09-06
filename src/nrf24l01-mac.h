@@ -24,6 +24,13 @@ enum {
 	NRF24_APP_LAST
 };
 
+
+// xmn parameters
+#define XMNMASK			0b11110000	// mask to transmission number
+#define MSGMASK			0b00001111	// mask to network message
+#define MSGXMN_SET(m, x)	((((x) << 4) & XMNMASK) | ((m) & MSGMASK))
+#define MSG_GET(v)					((v) & MSGMASK)
+
 // network retransmiting parameters
 #define NRF24_DELAY_MS		(((NRF24_ARD + 1) * \
 						NRF24_ARD_FACTOR_US) / 1000)
@@ -58,6 +65,7 @@ enum {
  */
 typedef struct __attribute__ ((packed)) {
 	uint16_t		net_addr;
+	uint8_t		msg_xmn;
 } hdr_t;
 
 /**
