@@ -18,6 +18,7 @@
 						| ((hostlong>>8) & 0x0000FF00)
 						| (hostlong << 24)))
 
+
 #define kntohs(netshort)	khtons(netshort)
 #define kntohl(netlong)		khtonl(netlong)
 #else

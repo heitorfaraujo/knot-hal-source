@@ -24,6 +24,15 @@ enum {
 	NRF24_APP_LAST
 };
 
+// network result codes
+enum {
+	NRF24_SUCCESS,
+	NRF24_ERROR,
+	NRF24_INVALID_VERSION,
+	NRF24_ECONNREFUSED,
+	NRF24_EUSERS,
+	NRF24_EOVERFLOW
+};
 
 // xmn parameters
 #define XMNMASK			0b11110000	// mask to transmission number
