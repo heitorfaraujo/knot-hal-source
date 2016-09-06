@@ -23,10 +23,30 @@ typedef struct {
 	uint8_t		pipe;
 } client_t;
 
+typedef struct {
+	uint8_t	msg_type,
+				pipe;
+	uint16_t	net_addr;
+	int16_t		offset,
+				retry,
+				offset_retry;
+} data_t;
 
 static int16_t	m_fd = SOCKET_INVALID;
 static client_t		m_client;
 static version_t	*m_pversion = NULL;
+
+static data_t *build_data(data_t *pd, uint8_t pipe, uint16_t net_addr,
+						uint8_t msg_type)
+{
+	pd->msg_type = msg_type;
+	pd->pipe = pipe;
+	pd->net_addr = net_addr;
+	pd->offset = 0;
+	pd->retry = SEND_RETRY;
+	pd->offset_retry = 0;
+	return pd;
+}
 
 int16_t nrf24l01_client_open(int16_t socket, uint8_t channel,
 							version_t *pversion)
