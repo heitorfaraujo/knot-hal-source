@@ -70,6 +70,9 @@ static int16_t send_data(data_t *pdata, void *praw, uint16_t len)
 			}
 		}
 	}
+	payload.hdr.msg_xmn = MSGXMN_SET(msg_type,
+			pdata->pipe != BROADCAST ? m_client.txmn : 0);
+
 	payload.hdr.net_addr = pdata->net_addr;
 	memcpy(payload.msg.raw, (((uint8_t *)praw) + pdata->offset), len);
 	pdata->offset_retry = pdata->offset;
