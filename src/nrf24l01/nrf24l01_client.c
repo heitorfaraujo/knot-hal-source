@@ -18,11 +18,30 @@
 #include "nrf24l01_client.h"
 #include "nrf24l01.h"
 #include "phy_driver.h"
+#include "util.h"
+
+
+static enum {
+	UNKNOWN,
+	REQUEST,
+	PENDING,
+	TIMEOUT,
+	PTX_FIRE,
+	PTX_GAP,
+	PTX
+} e_state;
+
+typedef struct {
+	unsigned long	start,
+					delay;
+} tline_t;
 
 typedef struct {
 	uint8_t		pipe,
 				rxmn,
-				txmn;
+				txmn,
+				heartbeat,
+				heartbeat_wait;
 } client_t;
 
 typedef struct {
@@ -90,6 +109,56 @@ static int16_t send_data(data_t *pdata, void *praw, uint16_t len)
 	return len;
 }
 
+static int16_t ptx_service(data_t *pdata, void *praw, uint16_t len)
+{
+	int	state = PTX_FIRE,
+			result = 0;
+
+	tline_t	timer;
+
+	while (state != PTX) {
+		switch (state) {
+		case  PTX_FIRE:
+			timer.start = tline_ms();
+			timer.delay = get_random_value(SEND_RANGE_MS,
+						SEND_FACTOR, SEND_RANGE_MS_MIN);
+			state = PTX_GAP;
+			/* No break; fall through intentionally */
+		case PTX_GAP:
+			if (!tline_timeout(tline_ms(), timer.start, timer.delay))
+				break;
+
+			state = PTX;
+			/* No break; fall through intentionally */
+		case PTX:
+			result = send_data(pdata, praw, len);
+			if (result != 0) {
+				if (--pdata->retry == 0) {
+					printf("Failed to send message to the pipe\n");
+					/* TO DO */
+					/* Call disconect */
+					return -ETIMEDOUT;
+				} else {
+					pdata->offset = pdata->offset_retry;
+					state = PTX_FIRE;
+				}
+			} else {
+				if (pdata->pipe != BROADCAST) {
+					if (!m_client.heartbeat)
+						m_client.heartbeat_wait = tline_ms();
+
+					++m_client.txmn;
+				}
+				if (len != pdata->offset) {
+					pdata->retry = SEND_RETRY;
+					state = PTX_FIRE;
+				}
+			}
+			break;
+		}
+	}
+	return result;
+}
 
 int16_t nrf24l01_client_open(int16_t socket, uint8_t channel,
 							version_t *pversion)
