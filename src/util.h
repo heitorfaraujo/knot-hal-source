@@ -43,6 +43,11 @@ unsigned long tline_ms(void);
  * \return  timeline value.
  */
 static inline unsigned long tline_ms(void) { return millis(); }
+/**
+ * \brief Gets current time in MICROSECONDS.
+ * \return  timeline value.
+ */
+static inline unsigned long tline_us(void) { return micros(); }
 
 #endif
 
@@ -54,6 +59,15 @@ static inline unsigned long tline_ms(void) { return millis(); }
  * \return  true for timeout expired; otherwise, false.
  */
 int tline_timeout(unsigned long time,  unsigned long last,  unsigned long timeout);
+
+/**
+ * \brief Get a random number value.
+ * \param   interval  Range to random value.
+ * \param   ntime  Number of times the interval.
+ * \param   min Minimum value.
+ * \return  random number value.
+ */
+int get_random_value(int interval, int ntime, int min);
 
 #ifdef __cplusplus
 } // extern "C"
