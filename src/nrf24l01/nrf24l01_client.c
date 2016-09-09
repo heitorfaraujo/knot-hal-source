@@ -292,6 +292,24 @@ static int16_t join_local(void)
 	return state;
 }
 
+//send NRF24_UNJOIN_LOCAL message
+static int16_t unjoin_local(void)
+{
+	join_t	join;
+	data_t data;
+
+	join.version.major = m_pversion->major;
+	join.version.minor = m_pversion->minor;
+	join.version.packet_size = khtons(m_pversion->packet_size);
+	join.hashid = khtonl(m_client.hashid);
+	join.data = m_client.pipe;
+	join.result = NRF24_SUCCESS;
+	return ptx_service(build_data(&data, m_client.pipe,
+		khtons(m_client.net_addr), NRF24_UNJOIN_LOCAL), &join,
+								sizeof(join_t));
+}
+
+
 int16_t nrf24l01_client_open(int16_t socket, uint8_t channel,
 							version_t *pversion)
 {
