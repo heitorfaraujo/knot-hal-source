@@ -12,6 +12,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <stdbool.h>
+#include <unistd.h>
 
 #include "phy_driver.h"
 #include "nrf24l01-mac.h"
@@ -78,6 +79,26 @@ static int nrf24l01_connect(int cli_sockfd, uint8_t to_addr, size_t len)
 
 	return result;
 }
+
+void nrf24l01_close(int socket)
+{
+
+	if (m_state == STATE_CLIENT)
+		nrf24l01_client_close(socket);
+
+	/* TO DO */
+	/* if (m_state == STATE_SERVER) */
+	/* Call server close */
+
+	close(socket);
+
+	if (socket == m_fd) {
+		m_fd = SOCKET_INVALID;
+		m_state =  STATE_UNKNOWN;
+	}
+
+}
+
 static void nrf24l01_remove(void)
 {
 
@@ -114,5 +135,6 @@ struct phy_driver nrf24l01 = {
 	.name = "nRF24L01",
 	.probe = nrf24l01_probe,
 	.remove = nrf24l01_remove,
-	.open = nrf24l01_open
+	.open = nrf24l01_open,
+	.close = nrf24l01_close
 };
