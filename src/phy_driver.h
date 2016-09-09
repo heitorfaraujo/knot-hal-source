@@ -52,7 +52,7 @@ struct phy_driver {
 	void (*remove) (void);
 
 	int (*socket) (int type, int protocol);
-	void (*close) (int sockfd);
+	int (*close) (int sockfd);
 	int (*listen) (int srv_sockfd);
 	int (*accept) (int srv_sockfd);
 	int (*connect) (int cli_sockfd, uint8_t to_addr, size_t len);
