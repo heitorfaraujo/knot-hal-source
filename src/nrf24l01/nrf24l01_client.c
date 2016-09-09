@@ -244,6 +244,85 @@ static int16_t clireq_read(uint16_t net_addr, join_t *pj, tline_t *pt)
 	return tline_timeout(tline_ms(), pt->start, pt->delay) ? TIMEOUT : PENDING;
 }
 
+static int16_t prx_service(uint8_t *buffer, uint16_t length)
+{
+	static int16_t offset = 0;
+	payload_t data;
+	uint8_t pipe, msg_type;
+	int16_t	len;
+
+	//checking if RX fifo contains data
+	for (pipe = nrf24l01_prx_pipe_available(); pipe != NRF24_NO_PIPE;
+					pipe = nrf24l01_prx_pipe_available()) {
+
+		len = nrf24l01_prx_data(&data, sizeof(data));
+		if (len > sizeof(data.hdr)) {
+			pipe = m_client.pipe;
+
+			len -= sizeof(data.hdr);
+			msg_type = MSG_GET(data.hdr.msg_xmn);
+			switch (msg_type) {
+			case NRF24_HEARTBEAT:
+				if (len != sizeof(join_t) ||
+					kntohl(data.msg.join.data) != pipe ||
+					data.msg.join.version.major != m_pversion->major ||
+					data.msg.join.version.minor != m_pversion->minor ||
+					kntohs(data.msg.join.version.packet_size) !=
+										m_pversion->packet_size) {
+					break;
+				}
+				if (MSGXMN_SET(msg_type, m_client.rxmn)  == data.hdr.msg_xmn) {
+					++m_client.rxmn;
+					m_client.heartbeat_wait = tline_ms();
+					m_client.heartbeat = false;
+				}
+				break;
+
+			case NRF24_APP_FIRST:
+			case NRF24_APP_FRAG:
+				if (len != NRF24_PW_MSG_SIZE)
+					break;
+
+				/* No break; fall through intentionally */
+			case NRF24_APP_LAST:
+			case NRF24_APP:
+				if (m_client.pipe == pipe &&
+					m_client.net_addr == kntohs(data.hdr.net_addr) &&
+					(MSGXMN_SET(msg_type, m_client.rxmn) ==
+								data.hdr.msg_xmn)) {
+
+					++m_client.rxmn;
+					if (!m_client.heartbeat)
+						m_client.heartbeat_wait = tline_ms();
+
+					if (msg_type == NRF24_APP ||
+									msg_type == NRF24_APP_FIRST)
+						offset = 0;
+
+					if ((offset + len) <= m_pversion->packet_size) {
+						if ((offset + len) > length)
+							len = length - offset;
+
+						if (len != 0) {
+							memcpy(buffer + offset,
+									&data.msg.raw, len);
+							offset += len;
+						}
+
+						if (msg_type == NRF24_APP ||
+							msg_type == NRF24_APP_LAST)
+							return offset;
+
+					}
+				}
+				break;
+			}
+		}
+	}
+
+	return check_heartbeat(&data.msg.join);
+}
+
 static int16_t join_local(void)
 {
 	int16_t state = REQUEST;
