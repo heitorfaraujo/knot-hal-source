@@ -295,6 +295,7 @@ static int16_t join_local(void)
 int16_t nrf24l01_client_open(int16_t socket, uint8_t channel,
 							version_t *pversion)
 {
+	int16_t ret, err;
 
 	if (socket == SOCKET_INVALID)
 		return -EBADF;
@@ -311,9 +312,19 @@ int16_t nrf24l01_client_open(int16_t socket, uint8_t channel,
 	m_fd = socket;
 	m_pversion = pversion;
 
-	/* TO DO */
-	/* call join_local here */
-	return -1;
+	ret = join_local();
+	if (ret == PRX)
+		return 0;
+
+	if (ret == TIMEOUT)
+		err = ETIMEDOUT;
+	else if (ret == USERS)
+		err = EUSERS;
+	else
+		err = EOVERFLOW;
+
+
+	return -err;
 }
 
 int16_t nrf24l01_client_close(int16_t socket)
