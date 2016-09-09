@@ -357,3 +357,17 @@ int8_t nrf24l01_close_pipe(uint8_t pipe)
 	return 0;
 }
 
+int8_t nrf24l01_deinit(void)
+{
+	int16_t		value;
+
+	if (m_mode == UNKNOWN_MODE)
+		return 0;
+
+	disable();
+	outr(NRF24_CONFIG, inr(NRF24_CONFIG) & ~NRF24_CFG_PWR_UP);
+	m_mode = UNKNOWN_MODE;
+
+	io_reset();
+	return 0;
+}
