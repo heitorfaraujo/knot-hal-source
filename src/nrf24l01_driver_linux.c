@@ -17,6 +17,7 @@
 #include "phy_driver.h"
 #include "nrf24l01-mac.h"
 #include "nrf24l01.h"
+#include "nrf24l01_client.h"
 
 // protocol version
 #define NRF24_VERSION_MAJOR	1
@@ -59,10 +60,10 @@ static int nrf24l01_probe(size_t packet_size)
 static int nrf24l01_connect(int cli_sockfd, uint8_t to_addr, size_t len)
 {
 
+	int result;
 	/* if m state is not UNKNOW, something went wrong in probe */
 	if (m_state != STATE_UNKNOWN)
 		return -EACCES;
-
 
 	if (m_fd == SOCKET_INVALID || cli_sockfd != m_fd)
 		return -EBADF;
@@ -71,12 +72,10 @@ static int nrf24l01_connect(int cli_sockfd, uint8_t to_addr, size_t len)
 						to_addr > NRF24_CH_MAX_1MBPS)
 		return -EINVAL;
 
-
-	/* TO DO */
-	/* Implement nrf24l01 client open function */
+	result = nrf24l01_client_open(cli_sockfd, to_addr, &m_version);
 	m_state = STATE_CLIENT;
 
-	return -1;
+	return result;
 }
 static void nrf24l01_remove(void)
 {
