@@ -340,5 +340,13 @@ int16_t nrf24l01_client_read(int16_t socket, uint8_t *buffer, uint16_t len)
 int16_t nrf24l01_client_write(int16_t socket, const uint8_t *buffer,
 								uint16_t len)
 {
-	return -1;
+	data_t data;
+
+	if (m_fd == SOCKET_INVALID || m_fd != socket)
+		return -EBADF;
+
+
+	return ptx_service(build_data(&data, m_client.pipe,
+		khtons(m_client.net_addr), NRF24_APP), (void *)buffer, len);
+
 }
