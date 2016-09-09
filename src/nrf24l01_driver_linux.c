@@ -106,7 +106,11 @@ static int nrf24l01_close(int socket)
 
 static void nrf24l01_remove(void)
 {
-
+	if (m_state != STATE_INVALID) {
+		nrf24l01_close(m_fd);
+		nrf24l01_deinit();
+		m_state = STATE_INVALID;
+	}
 }
 
 static int nrf24l01_socket(int type, int protocol)
