@@ -37,6 +37,17 @@ int tline(unsigned long *ptime, unsigned long time_base /*=1*/);
  */
 unsigned long tline_ms(void);
 
+/**
+ * \brief Gets current time in MICROSECONDS.
+ * \return  timeline value.
+ */
+unsigned long tline_us(void);
+/**
+ * \brief Gets current time in SECONDS.
+ * \return  timeline value.
+ */
+unsigned long tline_sec(void);
+
 #else
 /**
  * \brief Gets current time in MILLISECONDS.

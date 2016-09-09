@@ -14,7 +14,8 @@ proxy_spiproxyd_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
 				-I$(top_srcdir)/src/nrf24l01
 
 src_phynrfd_phynrfd_SOURCES = src/phynrfd/main.c \
-				src/phynrfd/manager.h src/phynrfd/manager.c
+				src/phynrfd/manager.h src/phynrfd/manager.c \
+				src/util.c src/util.h
 src_phynrfd_phynrfd_LDADD = libs/libnrf24l01_driver_linux.a \
 				 libs/libnrf24l01.a libs/libspi.a  \
 				 @GLIB_LIBS@

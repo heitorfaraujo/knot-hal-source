@@ -62,7 +62,7 @@ int tline_timeout(unsigned long time,  unsigned long last,  unsigned long timeou
 
 int get_random_value(int interval, int ntime, int min)
 {
-	int value;
+	int value=11597;
 
 	value = (9973 * ~tline_us()) + ((value) % 701);
 	srand((unsigned int)value);
