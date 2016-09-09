@@ -443,7 +443,10 @@ int16_t nrf24l01_client_close(int16_t socket)
 
 int16_t nrf24l01_client_read(int16_t socket, uint8_t *buffer, uint16_t len)
 {
-	return -1;
+	if (m_fd == SOCKET_INVALID || m_fd != socket)
+		return -EBADF;
+
+	return prx_service(buffer, len);
 }
 
 int16_t nrf24l01_client_write(int16_t socket, const uint8_t *buffer,
