@@ -347,7 +347,19 @@ int16_t nrf24l01_client_open(int16_t socket, uint8_t channel,
 
 int16_t nrf24l01_client_close(int16_t socket)
 {
-	return -1;
+	if (m_fd == SOCKET_INVALID || m_fd != socket)
+		return -EBADF;
+
+	if (m_client.net_addr != 0) {
+		if (unjoin_local() != 0)
+			return -EAGAIN;
+
+		disconnect();
+	}
+	m_fd = SOCKET_INVALID;
+	m_pversion = NULL;
+
+	return 0;
 }
 
 int16_t nrf24l01_client_read(int16_t socket, uint8_t *buffer, uint16_t len)
