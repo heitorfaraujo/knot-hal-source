@@ -135,6 +135,18 @@ static int nrf24l01_open(const char *pathname)
 	return m_fd;
 }
 
+static int nrf24l01_read(int sockfd, void *buffer, size_t len)
+{
+	/* access error if state is UNKNOWN or INVALID */
+	if (m_state <= STATE_UNKNOWN)
+		return -EACCES;
+
+	if (m_state == STATE_SERVER)
+		return read(sockfd, buffer, len);
+
+	return nrf24l01_client_read(sockfd, buffer, len);
+}
+
 struct phy_driver nrf24l01 = {
 	.name = "nRF24L01",
 	.probe = nrf24l01_probe,
