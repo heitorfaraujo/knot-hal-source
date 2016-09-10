@@ -147,10 +147,25 @@ static int nrf24l01_read(int sockfd, void *buffer, size_t len)
 	return nrf24l01_client_read(sockfd, buffer, len);
 }
 
+static int nrf24l01_write(int sockfd, const void *buffer, size_t len)
+{
+	if (m_state <= STATE_UNKNOWN)
+		return -EACCES;
+
+
+	if (m_state == STATE_SERVER)
+		return write(sockfd, buffer, len);
+
+
+	return nrf24l01_client_write(sockfd, (const uint8_t *)buffer, len);
+}
+
 struct phy_driver nrf24l01 = {
 	.name = "nRF24L01",
 	.probe = nrf24l01_probe,
 	.remove = nrf24l01_remove,
 	.open = nrf24l01_open,
-	.close = nrf24l01_close
+	.close = nrf24l01_close,
+	.recv = nrf24l01_read,
+	.send = nrf24l01_write
 };
