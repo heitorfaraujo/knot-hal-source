@@ -57,5 +57,5 @@ struct phy_driver {
 	int (*accept) (int srv_sockfd);
 	int (*connect) (int cli_sockfd, uint8_t to_addr, size_t len);
 	int (*recv) (int sockfd, void *buffer, size_t len);
-	size_t (*send) (int sockfd, const void *buffer, size_t len);
+	int (*send) (int sockfd, const void *buffer, size_t len);
 };
