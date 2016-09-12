@@ -44,9 +44,12 @@ typedef struct  {
 	data_t		*rxmsg;
 } client_t;
 
+
 /* vector saves the pipes where the clientes are connected */
 static client_t		*m_pipes_allocate[NRF24_PIPE_ADDR_MAX] = {NULL,
 							NULL, NULL, NULL, NULL};
+
+static struct dlist_head m_ptxlist = { &(m_ptxlist), &(m_ptxlist) };
 
 static inline int set_pipe_client(int pipe, client_t *pc)
 {
@@ -153,6 +156,13 @@ static int send_data(data_t *pdata, client_t *pc)
 	len = nrf24l01_ptx_wait_datasent();
 	nrf24l01_set_prx();
 	return len;
+}
+
+static inline void put_ptx_queue(data_t *pd)
+{
+	if (pd != NULL) {
+		list_move_tail(&pd->node, &m_ptxlist);
+	}
 }
 
 int nrf24l01_server_open(int socket, int channel, version_t *pversion,
