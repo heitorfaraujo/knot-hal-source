@@ -56,6 +56,14 @@ static inline int set_pipe_client(int pipe, client_t *pc)
 	return 0;
 }
 
+static inline client_t *get_pipe_client(int pipe)
+{
+	if (pipe > BROADCAST && pipe < (NRF24_PIPE_ADDR_MAX+1))
+		return m_pipes_allocate[pipe-1];
+
+	return NULL;
+}
+
 static data_t *build_data(int pipe, int net_addr, int msg_type,
 	void *praw, uint16_t len, data_t *msg)
 {
