@@ -1,3 +1,5 @@
+AM_CFLAGS = @GLIB_CFLAGS@
+
 lib_LIBRARIES = libnrf24l01.a
 lib_ARDUINO = nrf24l01.c nrf24l01.h nrf24l01_io.h nrf24l01_io_arduino.c
 
