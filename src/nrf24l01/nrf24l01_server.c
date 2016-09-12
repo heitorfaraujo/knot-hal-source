@@ -44,6 +44,18 @@ typedef struct  {
 	data_t		*rxmsg;
 } client_t;
 
+/* vector saves the pipes where the clientes are connected */
+static client_t		*m_pipes_allocate[NRF24_PIPE_ADDR_MAX] = {NULL,
+							NULL, NULL, NULL, NULL};
+
+static inline int set_pipe_client(int pipe, client_t *pc)
+{
+	if (pipe > BROADCAST && pipe < (NRF24_PIPE_ADDR_MAX+1))
+		m_pipes_allocate[pipe-1] = pc;
+
+	return 0;
+}
+
 static data_t *build_data(int pipe, int net_addr, int msg_type,
 	void *praw, uint16_t len, data_t *msg)
 {
