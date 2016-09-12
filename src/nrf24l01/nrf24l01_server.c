@@ -75,6 +75,17 @@ static int get_pipe_free(void)
 	return (pipe != 0 ? (NRF24_PIPE_ADDR_MAX - pipe) + 1 : NRF24_NO_PIPE);
 }
 
+static bool check_pipes_free(void)
+{
+	int pipe;
+	client_t	**pa = m_pipes_allocate;
+
+	for (pipe = NRF24_PIPE_ADDR_MAX; pipe != 0 && *pa == NULL; --pipe, ++pa)
+		;
+	/* if pipe is zero, theres no pipe free */
+	return (pipe == 0);
+}
+
 static data_t *build_data(int pipe, int net_addr, int msg_type,
 	void *praw, uint16_t len, data_t *msg)
 {
