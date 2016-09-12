@@ -86,6 +86,20 @@ static bool check_pipes_free(void)
 	return (pipe == 0);
 }
 
+static inline client_t *get_client(payload_t *ppl)
+{
+	int pipe;
+	client_t	**pa = m_pipes_allocate;
+
+	for (pipe = NRF24_PIPE_ADDR_MAX; pipe != 0; --pipe, ++pa) {
+		if (*pa != NULL && (*pa)->net_addr == ppl->hdr.net_addr &&
+			(*pa)->hashid == ppl->msg.join.hashid)
+			return *pa;
+	}
+
+	return NULL;
+}
+
 static data_t *build_data(int pipe, int net_addr, int msg_type,
 	void *praw, uint16_t len, data_t *msg)
 {
