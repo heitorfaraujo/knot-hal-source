@@ -30,11 +30,15 @@ src_phynrfd_phynrfd_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
 src_phyemud_phyemud_SOURCES = src/phyemud/main.c \
 			src/comm_private.h \
 			src/phyemud/manager.h src/phyemud/manager.c \
-			src/phyemud/phyunix.c src/phyemud/physerial.c
-src_phyemud_phyemud_LDADD = @GLIB_LIBS@
+			src/phyemud/phyunix.c src/phyemud/physerial.c \
+				src/comm_nrf24l01.c
+src_phyemud_phyemud_LDADD = @GLIB_LIBS@ libs/libcomm_nrf24l01.a \
+				 libs/libnrf24l01.a libs/libspi.a
 src_phyemud_phyemud_LDFLAGS = $(AM_LDFLAGS)
 src_phyemud_phyemud_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
-				-I$(top_srcdir)/src
+				-I$(top_srcdir)/src \
+				-I$(top_srcdir)/src/spi \
+				-I$(top_srcdir)/src/nrf24l01
 
 examples_uthingd_SOURCES = examples/uthing.c \
 			src/comm_private.h \
@@ -42,6 +46,7 @@ examples_uthingd_SOURCES = examples/uthing.c \
 examples_uthingd_LDFLAGS = $(AM_LDFLAGS)
 examples_uthingd_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
 				-I$(top_srcdir)/src
+
 
 DISTCLEANFILES =
 

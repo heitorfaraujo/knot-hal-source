@@ -30,6 +30,7 @@
 #define KNOTD_UNIX_ADDRESS		"knot"
 
 static guint unix_watch_id = 0;
+static int nrf24_fd = -1;
 
 struct session {
 	unsigned int thing_id;	/* Thing event source */
@@ -41,6 +42,7 @@ struct session {
 
 extern struct phy_driver phy_unix;
 extern struct phy_driver phy_serial;
+extern struct phy_driver nrf24l01;
 
 static int connect_unix(void)
 {
@@ -207,6 +209,75 @@ static gboolean generic_accept_cb(GIOChannel *io, GIOCondition cond,
 	return TRUE;
 }
 
+static int nrf24_start(void)
+{
+	struct session *session;
+	GIOCondition cond = G_IO_IN | G_IO_ERR | G_IO_HUP | G_IO_NVAL;
+	GIOChannel *io;
+	int retval, fd, knotdfd;
+
+
+	/* FIXME: pass 'spi' to driver */
+	retval= nrf24l01.probe();
+	if (retval < 0)
+		return retval;
+
+	/* nRF24 radio initialization */
+	fd = nrf24l01.open(NULL);
+	if (fd < 0) {
+		nrf24l01.remove();
+		return fd;
+	}
+
+	/* Blocking operation: waiting for available nRF24L01 channel */
+	retval = nrf24l01.listen(fd);
+	if (retval < 0) {
+		nrf24l01.close(fd);
+		nrf24l01.remove();
+		return retval;
+	}
+
+	nrf24_fd = fd;
+
+	knotdfd = connect_unix();
+	if (knotdfd < 0) {
+		phy_unix.close(nrf24_fd);
+		return FALSE;
+	}
+
+	printf("nrfd server started\n\r");
+
+	/* Tracking thing connection & data */
+	io = g_io_channel_unix_new(nrf24_fd);
+	g_io_channel_set_flags(io, G_IO_FLAG_NONBLOCK, NULL);
+	g_io_channel_set_close_on_unref(io, TRUE);
+
+	session = g_new0(struct session, 1);
+	/* Watch knotd socket */
+	session->knotd_io = g_io_channel_unix_new(knotdfd);
+	g_io_channel_set_flags(session->knotd_io, G_IO_FLAG_NONBLOCK, NULL);
+	g_io_channel_set_close_on_unref(session->knotd_io, TRUE);
+
+	session->knotd_id = g_io_add_watch_full(session->knotd_io,
+							G_PRIORITY_DEFAULT,
+							cond,
+							knotd_io_watch, session,
+							knotd_io_destroy);
+	g_io_channel_unref(session->knotd_io);
+
+	session->thing_io = io;
+	session->ops = &nrf24l01;
+
+	session->thing_id = g_io_add_watch_full(io, G_PRIORITY_DEFAULT,
+						cond, generic_io_watch, session,
+							generic_io_destroy);
+	g_io_channel_unref(io);
+
+
+
+	return 0;
+}
+
 static int unix_start(void)
 {
 	struct session *session;
@@ -310,7 +381,7 @@ static void serial_stop(void)
 	phy_serial.remove();
 }
 
-int manager_start(const char *serial, gboolean unix_sock)
+int manager_start(const char *serial, gboolean unix_sock, gboolean nrf24)
 {
 	int err;
 
@@ -319,6 +390,11 @@ int manager_start(const char *serial, gboolean unix_sock)
 
 	if (serial)
 		err = serial_start(serial);
+
+	if (nrf24){
+
+		err = nrf24_start();
+	}
 
 	if (err < 0)
 		return err;

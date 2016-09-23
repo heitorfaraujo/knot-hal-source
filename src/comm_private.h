@@ -39,6 +39,4 @@ struct phy_driver {
 	ssize_t (*send) (int sockfd, const void *buffer, size_t len);
 };
 
-extern struct phy_driver nrf24l01;
-
 

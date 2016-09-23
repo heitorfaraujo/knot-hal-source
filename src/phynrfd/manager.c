@@ -22,6 +22,7 @@
 
 #include "manager.h"
 
+extern struct phy_driver nrf24l01;
 static struct phy_driver *driver = &nrf24l01;
 
 static int nrf24_fd = -1;
