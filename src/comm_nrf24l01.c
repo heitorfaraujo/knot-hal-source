@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <stdio.h>
 
 #ifdef ARDUINO
 #include <avr_errno.h>
@@ -52,7 +53,7 @@ static ssize_t nrf24l01_recv(int sockfd, void *buffer, size_t len)
 	ssize_t length = -1;
 
 	/* TODO: check if the data received is fragmented or not */
-
+	printf("call recv\n");
 	/* If the pipe available */
 	if (nrf24l01_prx_pipe_available() == sockfd)
 		/* Copy data to buffer */

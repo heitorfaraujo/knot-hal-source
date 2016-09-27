@@ -6,11 +6,22 @@
  * of the BSD license. See the LICENSE file for details.
  *
  */
-
+#include <stdint.h>
+#include <stdbool.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+
 #include <glib.h>
 
+#include "comm_private.h"
 #include "manager.h"
 
 static GMainLoop *main_loop;
