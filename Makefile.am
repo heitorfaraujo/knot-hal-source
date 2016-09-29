@@ -4,7 +4,7 @@ AM_CFLAGS = $(WARNING_CFLAGS) $(BUILD_CFLAGS)
 AM_LDFLAGS = $(BUILD_LDFLAGS)
 
 bin_PROGRAMS = proxy/spiproxyd src/phynrfd/phynrfd src/phyemud/phyemud \
-							examples/uthingd
+							examples/uthingd tools/rwtest2
 
 proxy_spiproxyd_SOURCES = proxy/main.c
 proxy_spiproxyd_LDADD = libs/libspi.a libs/libnrf24l01.a @GLIB_LIBS@
@@ -42,6 +42,16 @@ examples_uthingd_SOURCES = examples/uthing.c \
 examples_uthingd_LDFLAGS = $(AM_LDFLAGS)
 examples_uthingd_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
 				-I$(top_srcdir)/src
+
+tools_rwtest2_SOURCES = tools/rwtest.c
+tools_rwtest2_LDADD = libs/libcomm_nrf24l01.a \
+				 libs/libnrf24l01.a libs/libspi.a \
+				 @GLIB_LIBS@
+tools_rwtest2_LDFLAGS = $(AM_LDFLAGS)
+tools_rwtest2_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
+				-I$(top_srcdir)/src \
+				-I$(top_srcdir)/src/spi \
+				-I$(top_srcdir)/src/nrf24l01
 
 DISTCLEANFILES =
 
