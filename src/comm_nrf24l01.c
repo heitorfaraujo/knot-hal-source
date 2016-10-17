@@ -23,6 +23,19 @@
 #define NRF24_MTU		32
 #define NRF24_PIPE0		0
 
+/* Logical channel ids */
+#define PDU_LID_DATA_FRAG	0x00 /* Data: Beginning or fragment */
+#define PDU_LID_DATA_END	0x01 /* Data: End of fragment or complete */
+#define PDU_LID_CONTROL		0x03 /* Control */
+
+struct ll_data_channel_pdu {
+	uint8_t lid:2;	/* 00 (data frag), 01 (data complete), 11: (control) */
+	uint8_t pm:2;	/* Protocol: 00 (raw), 01 (X), 10(Y), 11 (Z) */
+	uint8_t rfu:4;  /* RFU for Acknowledgment and Flow Control */
+
+	uint8_t payload[0];
+} __attribute__ ((packed));
+
 static int nrf24l01_probe(void)
 {
 	return nrf24l01_init("/dev/spidev0.0");
