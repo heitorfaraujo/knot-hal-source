@@ -119,8 +119,49 @@ static int nrf24l01_open(const char *pathname)
 
 static ssize_t nrf24l01_recv(int sockfd, void *buffer, size_t len)
 {
+	ssize_t ilen;
+	size_t plen;
+	uint8_t lid, datagram[NRF24_MTU];
+	const struct ll_data_channel_pdu *ipdu = (void *)datagram;
+	static int offset = 0;
+	static uint8_t seqnumber = 0;
 
-	return read_data(sockfd, buffer, len);
+	do {
+
+		/*
+		 * Reads the data,
+		 * on success, the number of bytes read is returned
+		 */
+		ilen = read_data(sockfd, datagram, NRF24_MTU);
+
+		if (ilen < 0)
+			return -1; /* FIX: error */
+
+		if (seqnumber != ipdu->rfu)
+			return -2; /* FIX: error */
+
+		if (seqnumber == 0)
+			offset = 0;
+
+		/* Payloag length = input length - header size */
+		plen = ilen - DATA_HDR_SIZE;
+		lid = ipdu->lid;
+
+		if (lid == PDU_LID_DATA_FRAG && plen < NRF24_PW_MSG_SIZE)
+			return -3; /* FIX: error */
+
+		memcpy(buffer + offset, ipdu->payload, plen);
+		offset += plen;
+		seqnumber++;
+
+	} while (lid != PDU_LID_DATA_END);
+
+	/* If the complete msg is received, resets the sequence number */
+	seqnumber = 0;
+
+	/* Returns de number of bytes received */
+	return offset;
+
 }
 
 static ssize_t nrf24l01_send(int sockfd, const void *buffer, size_t len)
