@@ -9,6 +9,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
+#include <unistd.h>
 
 #ifdef ARDUINO
 #include <avr_errno.h>
@@ -35,6 +37,12 @@ struct ll_data_channel_pdu {
 
 	uint8_t payload[0];
 } __attribute__ ((packed));
+
+#define DATA_HDR_SIZE		sizeof(struct ll_data_channel_pdu)
+#define NRF24_PW_MSG_SIZE	(NRF24_MTU - DATA_HDR_SIZE)
+
+/* 4 bits (0 - 15) are destinated to sequence number */
+#define NRF24_MAX_MSG_SIZE (16 * NRF24_PW_MSG_SIZE)
 
 static int nrf24l01_probe(void)
 {
@@ -118,15 +126,55 @@ static ssize_t nrf24l01_recv(int sockfd, void *buffer, size_t len)
 static ssize_t nrf24l01_send(int sockfd, const void *buffer, size_t len)
 {
 	int err;
+	uint8_t seqnumber, datagram[NRF24_MTU];
+	struct ll_data_channel_pdu *opdu = (void *)datagram;
+	size_t plen, left;
 
-	/* TODO: break the buffer in parts if the len > NRF24_MTU*/
-	if (len > NRF24_PAYLOAD_SIZE)
-		return -EINVAL;
+	/* If len is larger than the maximum message size */
+	if (len > NRF24_MAX_MSG_SIZE)
+		return -1;	/* FIX: erro */
 
-	err = send_data(sockfd, buffer, len);
+	left = len;
+	seqnumber = 0;	/* Packet sequence number */
 
-	return err;
+	while (left) {
+
+		/* Delay to avoid sending all packets too fast */
+		usleep(512);
+		/*
+		 * If left is larger than the NRF24_PW_MSG_SIZE,
+		 * payload length = NRF24_PW_MSG_SIZE,
+		 * if not, payload length = left
+		 */
+		plen = _MIN(left, NRF24_PW_MSG_SIZE);
+
+		/*
+		 * If left is larger than the NRF24_PW_MSG_SIZE,
+		 * it means that the packet is fragmented,
+		 * if not, it means that it is the last packet.
+		 */
+		opdu->lid = (left > NRF24_PW_MSG_SIZE) ?
+				PDU_LID_DATA_FRAG : PDU_LID_DATA_END;
+
+		/* Rfu is being used to save the sequence number.*/
+		opdu->rfu = seqnumber;
+
+		/* Offset = len - left */
+		memcpy(opdu->payload, buffer + (len - left), plen);
+
+		/* Send packet */
+		err = send_data(sockfd, datagram, plen + DATA_HDR_SIZE);
+		if (err < 0)
+			return err;
+
+		left -= plen;
+		seqnumber++;
+
+	}
+
+	return len;
 }
+
 
 static int nrf24l01_listen(int sockfd)
 {
