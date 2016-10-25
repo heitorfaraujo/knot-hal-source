@@ -230,6 +230,17 @@ int8_t nrf24l01_init(const char *dev)
 	return 0;
 }
 
+int8_t nrf24l01_deinit(void)
+{
+	int16_t		value;
+
+	disable();
+	outr(NRF24_CONFIG, inr(NRF24_CONFIG) & ~NRF24_CFG_PWR_UP);
+
+	io_reset();
+	return 0;
+}
+
 /*
 * nrf24l01_set_channel:
 * Bandwidth < 1MHz at 250kbps
