@@ -26,6 +26,14 @@
 
 #define NRF24_PIPE0		0
 
+const int ADDR_THING = 0x0112233;
+const int ADDR_GW = 0x0332211;
+
+enum {
+	SEND_PRESENCE,
+	WAIT_CONNECT
+};
+
 static int nrf24l01_probe(void)
 {
 	return nrf24l01_init("/dev/spidev0.0");
@@ -95,6 +103,53 @@ static int nrf24l01_open(const char *pathname)
 	 */
 
 	return 0;
+}
+
+static int nrf24_enable_presence(int sockfd)
+{
+
+	uint8_t lid, datagram[NRF24_MTU];
+	struct nrf24_ll_mgmt_pdu *opdu = (void *)datagram;
+	int err;
+
+	static unsigned long start;
+	static int state = SEND_PRESENCE;
+
+	switch (state) {
+
+	case SEND_PRESENCE:
+		/* Presence type */
+		opdu->type = NRF24_PDU_TYPE_PRESENCE;
+		/* Copy the source address to payload */
+		memcpy(opdu->payload, &ADDR_THING, sizeof(ADDR_THING));
+		/* Send presence */
+		err = send_data(sockfd, datagram, MGMT_HDR_SIZE + sizeof(ADDR_THING));
+		if (err < 0)
+			return err;
+
+		/* Starts timeout */
+		start = hal_time_ms();
+
+		/* Radio is in rx mode to receive connect request */
+
+		state = WAIT_CONNECT;
+
+	case WAIT_CONNECT:
+
+		if (hal_timeout(hal_time_ms(), start, 10) > 0) {
+			/*
+			 * Connection request timeout,
+			 * Send presence again
+			 */
+			state = SEND_PRESENCE;
+			return -ETIMEDOUT; /* Connection timed out */
+		}
+
+		/* Call for accept function */
+
+		break;
+	}
+
 }
 
 static ssize_t nrf24l01_recv(int sockfd, void *buffer, size_t len)

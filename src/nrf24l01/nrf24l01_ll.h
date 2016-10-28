@@ -38,6 +38,8 @@ struct nrf24_ll_mgmt_pdu {
 	uint8_t payload[0];		/* pack beacon of mgmt frames */
 } __attribute__ ((packed));
 
+#define MGMT_HDR_SIZE	sizeof(struct nrf24_ll_mgmt_pdu)
+
 /*
  * Used at ll_mgmt_channel_pdu.payload
  * Master assigns the channel and access address of the slaves.
