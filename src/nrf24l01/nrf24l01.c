@@ -144,6 +144,9 @@ int8_t nrf24l01_init(const char *dev)
 	uint8_t	value;
 	int8_t err;
 
+	/* Deinit the radio */
+	nrf24l01_deinit();
+
 	/* example of dev = "/dev/spidev0.0" */
 	err = io_setup(dev);
 	if (err < 0)
