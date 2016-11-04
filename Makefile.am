@@ -3,6 +3,9 @@ SUBDIRS = src/spi src/nrf24l01 src/hal/storage src/hal/time src/hal/log src/hal/
 AM_CFLAGS = $(WARNING_CFLAGS) $(BUILD_CFLAGS)
 AM_LDFLAGS = $(BUILD_LDFLAGS)
 
+lib_ARDUINO = include/comm.h include/log.h include/nrf24.h include/storage.h \
+				include/time.h src/avr_errno.h src/avr_unistd.h
+
 bin_PROGRAMS = proxy/spiproxyd src/nrfd/nrfd src/phyemud/phyemud \
 							examples/uthingd
 
@@ -47,6 +50,9 @@ DISTCLEANFILES =
 MAINTAINERCLEANFILES = Makefile.in \
 	aclocal.m4 configure config.h.in config.sub config.guess \
 	ltmain.sh depcomp compile missing install-sh
+
+all-local:
+	$(MKDIR_P) $(top_srcdir)/include/arduino && cp $(lib_ARDUINO) $(top_srcdir)/include/arduino
 
 clean-local:
 	$(RM) -r proxy/spiproxyd nrf/nrfd
