@@ -1,5 +1,6 @@
 lib_LIBRARIES = libnrf24l01.a
-lib_ARDUINO = nrf24l01.c nrf24l01.h nrf24l01_io.h nrf24l01_io_arduino.c
+lib_ARDUINO = nrf24l01.c nrf24l01.h nrf24l01_io.h nrf24l01_io_arduino.c \
+				nrf24l01_ll.h
 
 libnrf24l01_a_SOURCES = nrf24l01.c nrf24l01_io_linux.c
 libnrf24l01_a_CPPFLAGS = -I$(top_srcdir)/src/ -I$(top_srcdir)/src/spi
