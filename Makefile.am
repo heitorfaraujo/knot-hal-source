@@ -1,5 +1,7 @@
 AM_MAKEFLAGS = --no-print-directory
-SUBDIRS = src/spi src/nrf24l01 src/hal/storage src/hal/time src/hal/log src/hal/comm
+SUBDIRS = src/spi src/nrf24l01 src/hal/storage src/hal/time src/hal/log \
+			src/hal/comm src/drivers
+
 AM_CFLAGS = $(WARNING_CFLAGS) $(BUILD_CFLAGS)
 AM_LDFLAGS = $(BUILD_LDFLAGS)
 
@@ -7,7 +9,7 @@ lib_ARDUINO = include/comm.h include/log.h include/nrf24.h include/storage.h \
 				include/time.h src/avr_errno.h src/avr_unistd.h
 
 bin_PROGRAMS = proxy/spiproxyd src/nrfd/nrfd src/phyemud/phyemud \
-							examples/uthingd
+							examples/uthingd tools/phyd_test
 
 proxy_spiproxyd_SOURCES = proxy/main.c
 proxy_spiproxyd_LDADD = libs/libspi.a libs/libnrf24l01.a @GLIB_LIBS@
@@ -44,6 +46,17 @@ examples_uthingd_LDFLAGS = $(AM_LDFLAGS)
 examples_uthingd_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
 				-I$(top_srcdir)/src \
 				-I$(top_srcdir)/src/hal/comm
+
+tools_phyd_test_SOURCES = tools/phyd_test.c src/drivers/phy_driver.c
+tools_phyd_test_LDADD = libs/libphy_driver.a \
+				 libs/libnrf24l01.a libs/libspi.a \
+                 @GLIB_LIBS@
+tools_phyd_test_LDFLAGS = $(AM_LDFLAGS)
+tools_phyd_test_CFLAGS = $(AM_CFLAGS) @GLIB_CFLAGS@ \
+               -I$(top_srcdir)/src/drivers -I$(top_srcdir)/src/hal/comm \
+               -I$(top_srcdir)/src/spi \
+               -I$(top_srcdir)/src/nrf24l01
+
 
 DISTCLEANFILES =
 

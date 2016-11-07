@@ -27,6 +27,7 @@
 
 struct phy_driver {
 	const char *name;
+	const char *pathname;
 	int (*probe) (void);
 	void (*remove) (void);
 
@@ -37,6 +38,10 @@ struct phy_driver {
 	int (*connect) (int cli_sockfd, uint8_t to_addr);
 	ssize_t (*recv) (int sockfd, void *buffer, size_t len);
 	ssize_t (*send) (int sockfd, const void *buffer, size_t len);
+	int (*ioctl) (int sockfd, int cmd, void *arg);
+	int ref_open;
+	int fd;
+	uint8_t aa[5];
 };
 
 extern struct phy_driver nrf24l01;

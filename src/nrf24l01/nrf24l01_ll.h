@@ -10,8 +10,8 @@
 #define NRF24_MTU					32
 
 /* Common to all devices */
-#define NRF24_AA_MGMT_CHANNEL		0xDE96BED98D /* Access Address used for management */
-
+// #define NRF24_AA_MGMT_CHANNEL		0xDE96BED98D /* Access Address used for management */
+#define NRF24_AA_MGMT_CHANNEL		{0x8D, 0xD9, 0xBE, 0x96, 0xDE}
 /*
  * Recommended access address assignment for data channel
  * distributed by the master: B4B3B2B1B0
