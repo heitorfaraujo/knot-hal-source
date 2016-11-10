@@ -8,7 +8,6 @@
  */
 #include <stdint.h>
 #include <stdlib.h>
-#include <stdbool.h>
 
 #ifdef ARDUINO
 #include <avr_errno.h>
@@ -19,14 +18,59 @@
 #endif
 
 #include "include/comm.h"
-#include "nrf24l01.h"
-#include "nrf24l01_ll.h"
+#include "phy_driver.h"
 
+int8_t pipes_allocate[] = {0, 0, 0, 0, 0};
+
+int driverIndex = -1;
+
+/* Local functions */
+inline int get_free_pipe(void)
+{
+	uint8_t i;
+
+	for (i = 0; i < sizeof(pipes_allocate); i++) {
+		if (pipes_allocate[i] == 0) {
+			/* one peer for pipe*/
+			pipes_allocate[i] = 1;
+			return i+1;
+		}
+	}
+
+	/* No free pipe */
+	return -1;
+}
 
 int hal_comm_socket(int domain, int protocol)
 {
+	int retval;
 
-	return -ENOSYS;
+	switch (protocol) {
+
+	case HAL_COMM_PROTO_MGMT:
+		driverIndex = phy_open("NRF0");
+		if (driverIndex < 0)
+			return driverIndex;
+
+		retval = 0;
+		break;
+
+	case HAL_COMM_PROTO_RAW:
+
+		if (driverIndex == -1)
+			return -EPERM;	/* Operation not permitted */
+
+		retval = get_free_pipe();
+		if (retval < 0)
+			return - EUSERS;
+		break;
+
+	default:
+		retval = -EINVAL;  /* Invalid argument */
+		break;
+	}
+
+	return retval;
 }
 
 void hal_comm_close(int sockfd)
