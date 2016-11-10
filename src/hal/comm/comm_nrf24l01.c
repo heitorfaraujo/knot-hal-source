@@ -75,6 +75,13 @@ int hal_comm_socket(int domain, int protocol)
 
 void hal_comm_close(int sockfd)
 {
+	if (sockfd > 1 && sockfd < 5) {
+		/* Free pipe */
+		pipes_allocate[sockfd-1] = 0;
+
+		/* Close driver */
+		phy_close(driverIndex);
+	}
 
 }
 
