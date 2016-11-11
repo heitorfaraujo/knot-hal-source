@@ -21,6 +21,7 @@
  */
 
 int hal_comm_init(const char *pathname);
+int hal_comm_deinit();
 
 int hal_comm_socket(int domain, int protocol);
 
