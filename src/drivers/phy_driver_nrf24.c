@@ -119,11 +119,13 @@ static int nrf24l01_ioctl(int spi_fd, int cmd, void *arg)
 		}
 		break;
 
+	case CMD_RESET_PIPE:
+		// err = nrf24l01_close_pipe(*((int) arg));
+		break;
 	/* Command to set channel pipe */
 	case CMD_SET_CHANNEL:
 		err = nrf24l01_set_channel(spi_fd, *((int *) arg));
 		break;
-
 	default:
 		err = -1;
 	}
