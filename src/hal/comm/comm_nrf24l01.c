@@ -61,6 +61,7 @@ struct nrf24_data {
 	uint8_t seqnumber_tx;
 	uint8_t seqnumber_rx;
 	size_t offset_rx;
+	size_t offset_tx;
 	unsigned long keepalive_wait;
 	uint8_t keepalive;
 	struct nrf24_mac mac;
@@ -345,61 +346,47 @@ static int write_raw(int spi_fd, int sockfd)
 	int err;
 	struct nrf24_io_pack p;
 	struct nrf24_ll_data_pdu *opdu = (void *)p.payload;
-	size_t plen, left;
+	size_t plen;
 
 	/* If has nothing to send, returns EBUSY */
 	if (peers[sockfd-1].len_tx == 0)
 		return -EAGAIN;
 
-	/* If len is larger than the maximum message size */
-	if (peers[sockfd-1].len_tx > DATA_SIZE)
-		return -EINVAL;
-
 	/* Set pipe to be sent */
 	p.pipe = sockfd;
-	/* Amount of bytes to be sent */
-	left = peers[sockfd-1].len_tx;
 
-	while (left) {
+	/*
+	 * If len_tx is larger than the NRF24_PW_MSG_SIZE,
+	 * payload length = NRF24_PW_MSG_SIZE,
+	 * if not, payload length = len_tx
+	 */
+	plen = _MIN(peers[sockfd-1].len_tx, NRF24_PW_MSG_SIZE);
 
-		/* Delay to avoid sending all packets too fast */
-		hal_delay_us(512);
-		/*
-		 * If left is larger than the NRF24_PW_MSG_SIZE,
-		 * payload length = NRF24_PW_MSG_SIZE,
-		 * if not, payload length = left
-		 */
-		plen = _MIN(left, NRF24_PW_MSG_SIZE);
+	/*
+	 * If len_tx is larger than the NRF24_PW_MSG_SIZE,
+	 * it means that the packet is fragmented,
+	 * if not, it means that it is the last packet.
+	 */
+	opdu->lid = (peers[sockfd-1].len_tx > NRF24_PW_MSG_SIZE) ?
+		NRF24_PDU_LID_DATA_FRAG : NRF24_PDU_LID_DATA_END;
 
-		/*
-		 * If left is larger than the NRF24_PW_MSG_SIZE,
-		 * it means that the packet is fragmented,
-		 * if not, it means that it is the last packet.
-		 */
-		opdu->lid = (left > NRF24_PW_MSG_SIZE) ?
-			NRF24_PDU_LID_DATA_FRAG : NRF24_PDU_LID_DATA_END;
+	/* Packet sequence number */
+	opdu->nseq = peers[sockfd-1].seqnumber_tx;
 
-		/* Packet sequence number */
-		opdu->nseq = peers[sockfd-1].seqnumber_tx;
+	memcpy(opdu->payload, peers[sockfd-1].buffer_tx +
+			peers[sockfd-1].offset_tx, plen);
 
-		/* Offset = len - left */
-		memcpy(opdu->payload, peers[sockfd-1].buffer_tx +
-			(peers[sockfd-1].len_tx - left), plen);
-
-		/* Send packet */
-		err = phy_write(spi_fd, &p, plen + DATA_HDR_SIZE);
-		/*
-		 * If write error then reset tx len
-		 * and sequence number
-		 */
-		if (err < 0) {
-			peers[sockfd-1].len_tx = 0;
-			peers[sockfd-1].seqnumber_tx = 0;
-			return err;
-		}
-
-		left -= plen;
-		peers[sockfd-1].seqnumber_tx++;
+	/* Send packet */
+	err = phy_write(spi_fd, &p, plen + DATA_HDR_SIZE);
+	/*
+     * If write error then reset tx len
+     * and sequence number
+     */
+	if (err < 0) {
+		peers[sockfd-1].len_tx = 0;
+		peers[sockfd-1].offset_tx = 0;
+		peers[sockfd-1].seqnumber_tx = 0;
+		return err;
 	}
 
 	/* Restart keepalive timeout */
@@ -407,13 +394,16 @@ static int write_raw(int spi_fd, int sockfd)
 	if (peers[sockfd-1].keepalive >= 1)
 		peers[sockfd-1].keepalive = 1;
 
-	err = peers[sockfd-1].len_tx;
+	peers[sockfd-1].offset_tx += plen;
+	peers[sockfd-1].len_tx -= plen;
+	peers[sockfd-1].seqnumber_tx++;
+	if (peers[sockfd-1].len_tx == 0) {
+		/* Resets controls */
+		peers[sockfd-1].offset_tx = 0;
+		peers[sockfd-1].seqnumber_tx = 0;
+	}
 
-	/* Resets controls */
-	peers[sockfd-1].len_tx = 0;
-	peers[sockfd-1].seqnumber_tx = 0;
-
-	return err;
+	return 0;
 }
 
 static int read_raw(int spi_fd, int sockfd)
