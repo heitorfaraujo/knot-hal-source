@@ -573,8 +573,9 @@ static void presence_connect(int spi_fd)
 {
 	struct nrf24_io_pack p;
 	struct nrf24_ll_mgmt_pdu *opdu = (void *)p.payload;
-	struct nrf24_mac *payload =
-				(struct nrf24_mac *) opdu->payload;
+	struct nrf24_ll_presence *presence =
+				(struct nrf24_ll_presence *) opdu->payload;
+
 	size_t len;
 	static unsigned long start;
 	/* Start timeout */
@@ -588,8 +589,10 @@ static void presence_connect(int spi_fd)
 
 		p.pipe = 0;
 		opdu->type = NRF24_PDU_TYPE_PRESENCE;
-		payload->address.uint64 = addr_slave.address.uint64;
-		len = sizeof(struct nrf24_ll_mgmt_pdu)+sizeof(struct nrf24_mac);
+		presence->mac.address.uint64 = addr_slave.address.uint64;
+		len = sizeof(struct nrf24_ll_mgmt_pdu) +
+					sizeof(struct nrf24_ll_presence);
+
 		phy_write(spi_fd, &p, len);
 		/* Init time */
 		start = hal_time_ms();
@@ -694,6 +697,7 @@ static void running(void)
 		}
 
 		sockIndex++;
+
 		/* Resets sockIndex if sockIndex > CONNECTION_COUNTER */
 		if (sockIndex > CONNECTION_COUNTER)
 			sockIndex = 1;

@@ -93,6 +93,11 @@ struct nrf24_ll_crtl_pdu {
 #define NRF24_KEEPALIVE_SEND_MS		2560
 #define NRF24_KEEPALIVE_TIMEOUT_MS	(10 * NRF24_KEEPALIVE_SEND_MS)
 
+struct nrf24_ll_presence {
+	uint8_t name[0];
+	struct nrf24_mac mac;	/* Source address */
+} __attribute__ ((packed));
+
 /*
  * Keep alive should be sent every 2560ms. Timeout happens
  * after 25600ms (10 keep alive without response).
