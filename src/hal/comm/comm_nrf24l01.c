@@ -289,15 +289,19 @@ static int read_mgmt(int spi_fd)
 		struct mgmt_evt_nrf24_bcast_presence *evt_presence =
 			(struct mgmt_evt_nrf24_bcast_presence *)evt->payload;
 		/* Mac address structure */
-		struct nrf24_mac *mac = (struct nrf24_mac *)ipdu->payload;
+		struct nrf24_ll_presence *presence =
+					(struct nrf24_ll_presence *)ipdu->payload;
 
 		/* Header type is a broadcast presence */
 		evt->opcode = MGMT_EVT_NRF24_BCAST_PRESENCE;
 		evt->index = 0;
 		/* Copy source address */
-		evt_presence->mac.address.uint64 = mac->address.uint64;
-
-		mgmt.len_rx = sizeof(struct nrf24_mac) +
+		evt_presence->mac.address.uint64 = presence->mac.address.uint64;
+		/*
+		 * evt_presence->name should be the name.
+		 * change de len_rx
+		 */
+		mgmt.len_rx = sizeof(struct nrf24_ll_presence) +
 				sizeof(struct mgmt_nrf24_header);
 	}
 		break;
@@ -590,6 +594,12 @@ static void presence_connect(int spi_fd)
 		p.pipe = 0;
 		opdu->type = NRF24_PDU_TYPE_PRESENCE;
 		presence->mac.address.uint64 = addr_slave.address.uint64;
+
+		/*
+		 * memcpy(presence->name, "someName", sizeof("someName");
+		 * and change the len parameter
+		 */
+
 		len = sizeof(struct nrf24_ll_mgmt_pdu) +
 					sizeof(struct nrf24_ll_presence);
 
